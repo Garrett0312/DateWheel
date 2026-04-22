@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DateWheel — Trident Process</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:       #191970;
+    --navy-mid:   #383870;
+    --navy-light: #2828ae;
+    --gold:       #CB7227;
+    --gold-light: #CB7B27;
+    --white:      #FFFFFF;
+    --off-white:  #F4F6F9;
+    --gray:       #2f2f2f;
+    --gray-light: #5c5c5c;
+    --red:        #c0392b;
+    --green:      #1e7e4a;
+    --font-head:  'parisine-std', sans-serif;
+    --font-body:  'parisine-std-compress', sans-serif;
+    --radius:     6px;
+    --shadow:     0 4px 18px rgba(13,35,64,0.15);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background-color: #d7d7d7;
+    background-image:
+      url('Grid_Pattern.svg'),
+      linear-gradient(rgba(255,255,255,0.96), rgba(255,255,255,0.96));
+
+    background-size: 800px;
+    background-repeat: repeat;
+    background-attachment: fixed;
+
+    color: var(--navy);
+    min-height: 100vh;
+  }
+
+  body.dark {
+    background-color: #111418;
+    background-image:
+      linear-gradient(rgba(17,20,24,0.92), rgba(17,20,24,0.92)),
+      url("https://live-trident-process.pantheonsite.io/wp-content/uploads/2023/10/Footer_Grid_Pattern_Update-1.svg");
+
+    color: #f3f3f3;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    background: var(--navy);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    border-bottom: 3px solid var(--gold);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+
+  .header-logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-decoration: none;
+  }
+
+  /* Container for buttons in the header */
+  .header-nav {
+    display: flex;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px;
+    border-radius: 4px;
+  }
+
+  /* Styled as sleek header tabs */
+  .nav-btn {
+    background: transparent;
+    border: none;
+    color: var(--white);
+    padding: 6px 16px;
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+  }
+
+  /* Hover and Active states */
+  .nav-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .nav-btn.active {
+    background: var(--gold);
+    color: var(--navy);
+  }
+
+  .logo-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+
+  .logo-text .brand {
+    font-family: var(--font-head);
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .logo-text .sub {
+    font-size: 10px;
+    color: var(--off-white);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .header-title {
+    font-family: var(--font-head);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--off-white);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .header-date {
+    font-size: 13px;
+    color: var(--off-white);
+    font-weight: 500;
+    text-align: right;
+  }
+
+  .header-date .today-label {
+    color: var(--gold-light);
+    font-weight: 700;
+    font-size: 15px;
+    display: block;
+  }
+
+  /* ─── PAGE TABS ─── */
+  .page-tabs {
+    max-width: 1600px;
+    margin: 24px auto 0;
+    padding: 0 24px;
+    display: flex;
+    gap: 10px;
+  }
+
+  .page-tab {
+    padding: 10px 18px;
+    border: none;
+    border-radius: var(--radius);
+    background: var(--white);
+    color: var(--navy);
+    font-family: var(--font-head);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+  }
+
+  .page-tab.active {
+    background: var(--navy);
+    color: var(--white);
+  }
+
+  /* ─── LAYOUT ─── */
+  .page {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 32px 24px 60px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 400px 400px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 1024px) {
+    .grid { grid-template-columns: 1fr 1fr; } /* Drop to 2 columns on medium screens */
+  }
+
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: 1fr; } /* Stack vertically on phones */
+    header { padding: 0 16px; }
+    .header-title { display: none; }
+  }
+
+  /* ─── CARDS ─── */
+  .card {
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(6px);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    border: 1px solid var(--gray-light);
+  }
+
+  .card-header {
+    background: var(--navy);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-header h2 {
+    font-family: var(--font-head);
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .card-icon {
+    color: var(--gold);
+    font-size: 18px;
+  }
+
+  .card-body { padding: 24px 20px; }
+
+  /* ─── FORM ELEMENTS ─── */
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gray);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+
+  input[type="date"], input[type="number"], select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--gray-light);
+    border-radius: var(--radius);
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: var(--navy);
+    background: var(--off-white);
+    transition: border-color 0.15s;
+    appearance: none;
+  }
+
+  input[type="date"]:focus, input[type="number"]:focus, select:focus {
+    outline: none;
+    border-color: var(--gold);
+    background: #fff;
+  }
+
+  .field { margin-bottom: 16px; }
+
+  .row-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* ─── TOGGLE ─── */
+  .toggle-group {
+    display: flex;
+    flex-wrap: wrap;
+    border: 1.5px solid var(--gray-light);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--off-white);
+  }
+
+  .toggle-group button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    font-family: var(--font-head);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gray);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .toggle-group button.active {
+    background: var(--navy);
+    color: var(--gold);
+  }
+
+  /* ─── RESULT BOX ─── */
+  .result-box {
+    background: var(--navy);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-top: 20px;
+    border-left: 4px solid var(--gold);
+  }
+
+  .result-box .result-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+
+  .result-box .result-main {
+    font-family: var(--font-head);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1.1;
+  }
+
+  .result-box .result-sub {
+    font-size: 13px;
+    color: var(--off-white);
+    margin-top: 4px;
+  }
+
+  .result-box.warning {
+    border-left-color: #e67e22;
+  }
+  .result-box.warning .result-sub {
+    color: #e67e22;
+    font-weight: 600;
+  }
+
+  .holiday-warning-text {
+    font-size: 11px;
+    font-weight: 700;
+    color: #d9534f; /* A subtle red */
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  /* ─── STAT PILLS ─── */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .stat-pill {
+    background: var(--off-white);
+    border: 1px solid var(--gray-light);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    text-align: center;
+  }
+
+  .stat-pill .pill-val {
+    font-family: var(--font-head);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  .stat-pill .pill-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gray);
+    margin-top: 2px;
+  }
+
+  /* ─── HOLIDAYS CARD ─── */
+  .holiday-list {
+    list-style: none;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  .holiday-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--gray-light);
+    font-size: 14px;
+  }
+
+  .holiday-item:last-child { border-bottom: none; }
+
+  .holiday-item .hdate {
+    font-weight: 600;
+    color: var(--navy);
+    min-width: 110px;
+    font-size: 13px;
+  }
+
+  .holiday-item .hname {
+    color: #444;
+    flex: 1;
+  }
+
+  .holiday-item .hdelete {
+    background: none;
+    border: none;
+    color: var(--gray);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+    line-height: 1;
+  }
+
+  .holiday-item .hdelete:hover { color: var(--red); background: #fdecea; }
+
+  .add-holiday-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 8px;
+    margin-top: 14px;
+    align-items: end;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--font-head);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary { background: var(--gold); color: var(--navy); }
+  .btn-primary:hover { background: var(--gold-light); }
+
+  .btn-sm { padding: 10px 12px; font-size: 13px; }
+
+  .year-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .year-tab {
+    padding: 5px 14px;
+    border: 1.5px solid var(--gray-light);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gray);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .year-tab.active {
+    background: var(--navy);
+    color: var(--white);
+    border-color: var(--navy);
+  }
+
+  /* ─── DST BADGE ─── */
+  .dst-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--off-white);
+    border: 1.5px solid var(--gray-light);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 14px;
+  }
+
+  .dst-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--gray);
+  }
+
+  .dst-dot.on  { background: var(--green); }
+  .dst-dot.off { background: var(--red); }
+
+  /* ─── SECTION DIVIDER ─── */
+  .divider {
+    height: 1px;
+    background: var(--gray-light);
+    margin: 20px 0;
+  }
+
+  /* ─── INFO STRIP ─── */
+  .info-strip {
+    display: flex;
+    gap: 16px;
+    background: var(--navy);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .info-strip .strip-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .info-strip .strip-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  .info-strip .strip-val {
+    font-family: var(--font-head);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--white);
+  }
+
+  .strip-sep {
+    width: 1px;
+    height: 36px;
+    background: var(--navy-light);
+    align-self: center;
+  }
+
+  /* scrollbar */
+  .holiday-list::-webkit-scrollbar { width: 5px; }
+  .holiday-list::-webkit-scrollbar-track { background: transparent; }
+  .holiday-list::-webkit-scrollbar-thumb { background: var(--gray-light); border-radius: 4px; }
+
+  html {
+    zoom: 1.1; 
+    /* Fallback for browsers that don't support 'zoom' */
+    -moz-transform: scale(1.1);
+    -moz-transform-origin: 0 0;
+  }
+
+  body {
+    /* Ensures no weird scrollbars appear from the scaling */
+    overflow-x: hidden;
+    width: 100%;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <a class="header-logo">
+    <img src="Trident_Stacked.svg" height="45">
+    <div class="logo-text">
+      <span class="brand">Trident Process</span>
+      <span class="sub">Industrial Process Equipment Solutions</span>
+    </div>
+  </a>
+  <div class="header-nav">
+    <button class="nav-btn active" id="tabCalcBtn" onclick="showTab('calc')">Calculator</button>
+    <button class="nav-btn" id="tabHolBtn" onclick="showTab('holidays')">Holidays</button>
+  </div>
+  <div class="header-date">
+    <span class="today-label" id="headerToday"></span>
+    Week <span id="headerWeek"></span> &nbsp;·&nbsp; <span id="headerDST"></span>
+  </div>
+</header>
+
+<!-- PAGE -->
+<div class="page">
+
+  <div id="calcTab">
+
+    <!-- INFO STRIP -->
+    <div class="info-strip">
+      <div class="strip-item">
+        <span class="strip-lbl">Today</span>
+        <span class="strip-val" id="stripDate"></span>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-item">
+        <span class="strip-lbl">Week</span>
+        <span class="strip-val" id="stripWeek"></span>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-item">
+        <span class="strip-lbl">Day of Year</span>
+        <span class="strip-val" id="stripDoy"></span>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-item">
+        <span class="strip-lbl">Quarter</span>
+        <span class="strip-val" id="stripQ"></span>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-item">
+        <span class="strip-lbl">DST Status</span>
+        <span class="strip-val" id="stripDSTval"></span>
+      </div>
+  </div>
+
+  <!-- THREE COLUMNS -->
+  <div class="grid">
+
+    <!-- LEFT: Date Calculator -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">&#128197;</span>
+        <h2>Date Calculator</h2>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>Start Date</label>
+          <input type="date" id="dc_start">
+          <div style="text-align: right;">
+              <span onclick="resetToToday()" style="font-size: 10px; color: var(--gold); cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+                ↺ Reset to Today
+              </span>
+            </div>
+        </div>
+        <div class="row-fields">
+          <div class="field">
+            <label>Direction</label>
+            <div class="toggle-group">
+              <button id="dc_plus"  class="active" onclick="setSign('+')">+</button>
+              <button id="dc_minus"              onclick="setSign('−')">−</button>
+            </div>
+          </div>
+          <div class="field">
+            <label id="dc_units_label">Number of Work Days</label>
+            <input type="number" id="dc_days" value="15" min="1" max="999">
+          </div>
+        </div>
+        <div class="field">
+          <label>Count</label>
+          <div class="toggle-group">
+            <button id="dc_workingday" class="active" onclick="setWorkingMode('work')">Work Day</button>
+            <button id="dc_calendarday"               onclick="setWorkingMode('day')">Calendar Day</button>
+            <button id="dc_calendarweek"              onclick="setWorkingMode('week')">Calendar Week</button>
+            <button id="dc_calendarmonth"             onclick="setWorkingMode('month')">Calendar Month</button>
+          </div>
+        </div>
+
+        <div class="result-box" id="dc_result">
+          <div class="result-label">Result Date</div>
+          <div class="result-main" id="dc_result_date">—</div>
+          <div class="result-sub" id="dc_result_sub"></div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-pill">
+            <div class="pill-val" id="dc_weeks">—</div>
+            <div class="pill-lbl">Weeks ARO</div>
+          </div>
+          <div class="stat-pill">
+            <div class="pill-val" id="dc_cal_days">—</div>
+            <div class="pill-lbl">Cal. Days</div>
+          </div>
+          <div class="stat-pill">
+            <div class="pill-val" id="dc_work_days">—</div>
+            <div class="pill-lbl">Work Days</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MIDDLE: Between Dates Calculator -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">&#8596;</span>
+        <h2>Between Dates</h2>
+      </div>
+      <div class="card-body">
+        <div class="row-fields">
+          <div class="field">
+            <label>Start Date</label>
+            <input type="date" id="bd_start">
+            <div style="text-align: right;">
+              <span onclick="resetToToday()" style="font-size: 10px; color: var(--gold); cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+                ↺ Reset to Today
+              </span>
+            </div>
+          </div>
+          <div class="field">
+            <label>End Date</label>
+            <input type="date" id="bd_end">
+          </div>
+        </div>
+
+        <div class="result-box" id="bd_result">
+          <div class="result-label">Shipment ARO</div>
+          <div class="result-main" id="bd_aro">—</div>
+          <div class="result-sub" id="bd_sub"></div>
+          <div id="bd_holiday_warn" class="holiday-warning-text"></div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-pill">
+            <div class="pill-val" id="bd_cal">—</div>
+            <div class="pill-lbl">Cal. Days</div>
+          </div>
+          <div class="stat-pill">
+            <div class="pill-val" id="bd_work">—</div>
+            <div class="pill-lbl">Work Days</div>
+          </div>
+          <div class="stat-pill">
+            <div class="pill-val" id="bd_weeks">—</div>
+            <div class="pill-lbl">Weeks</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div style="font-size:13px; color:var(--gray); font-weight:600; text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px;">Breakdown</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div class="stat-pill">
+            <div class="pill-val" id="bd_months_days">—</div>
+            <div class="pill-lbl">Months &amp; Days</div>
+          </div>
+          <div class="stat-pill">
+            <div class="pill-val" id="bd_weeks_days">—</div>
+            <div class="pill-lbl">Weeks &amp; Days</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div style="font-size:13px; color:var(--gray); font-weight:600; text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px;">Actions</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="pushToWheel('work')">
+            ⤤ Push Work Days
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="pushToWheel('cal')" style="background: var(--navy); color: white;">
+            ⤤ Push Cal Days
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT CALENDAR WHEEL-->
+    <div class="card" style="display: flex; justify-content: center; align-items: center; padding: 10px; background: white; border-radius: 50%; aspect-ratio: 1 / 1; width: 100%; max-width: 650px; margin: 0 auto; overflow: visible; box-shadow: var(--shadow);">
+      <div id="wheel-container" style="position: relative; width: 100%; max-width: 640px; aspect-ratio: 1 / 1; overflow: visible;">
+        <img src="SchedulingWheelOuterCutout.png" id="outer-ring" 
+            style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1;">
+        <img src="SchedulingWheelInner.png" id="inner-disk" 
+            style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 2;">
+        <svg id="highlight-svg" viewBox="0 0 650 650" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 3; pointer-events: none;">
+          <circle id="highlight-arc" 
+                  cx="325" cy="325" r="270" 
+                  fill="none" 
+                  stroke="var(--gold)" 
+                  stroke-width="8" 
+                  stroke-linecap="square" 
+                  opacity="0.6" 
+                  style="transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1); transform: rotate(-89.2deg); transform-origin: center;" />
+        </svg>
+        <div id="red-arrow-container" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 5; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none;">
+          <div style="position: absolute; bottom: 50%; left: 50%; transform: translateX(-50%); width: 0.8%; height: 39%; background: var(--red); border-radius: 2px;"></div>
+          <div style="position: absolute; top: 9.5%; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 20px solid var(--red);"></div>
+        </div>
+      </div>
+    </div>
+
+    </div>
+    </div>
+
+    <div id="holidaysTab" style="display:none;">
+      <div class="grid">
+        <div class="card" style="grid-column: 1 / -1;">
+      <div class="card-header">
+        <span class="card-icon">&#127881;</span>
+        <h2>Holidays &amp; Observed Dates</h2>
+      </div>
+      <div class="card-body">
+        <div class="year-tabs" id="yearTabs"></div>
+        <ul class="holiday-list" id="holidayList"></ul>
+        <div class="add-holiday-row">
+          <div>
+            <label>Holiday Name</label>
+            <input type="text" id="newHolName" placeholder="e.g. Company Picnic" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-light);border-radius:var(--radius);font-family:var(--font-body);font-size:14px;color:var(--navy);background:var(--off-white);">
+          </div>
+          <div>
+            <label>Date</label>
+            <input type="date" id="newHolDate">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="addHoliday()">+ Add</button>
+        </div>
+        <div id="dstInfo" style="margin-top:14px;"></div>
+      </div>
+    </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// HOLIDAYS DATA
+// ═══════════════════════════════════════════════════
+function getHolidaysForYear(year) {
+  const hols = [];
+
+  // Helper to handle "Observed" logic
+  function addObserved(name, date) {
+    let d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const day = d.getDay();
+    if (day === 6) { // Saturday -> Friday
+      d.setDate(d.getDate() - 1);
+      hols.push({ name: `${name} (Observed)`, date: toISO(d) });
+    } else if (day === 0) { // Sunday -> Monday
+      d.setDate(d.getDate() + 1);
+      hols.push({ name: `${name} (Observed)`, date: toISO(d) });
+    } else {
+      hols.push({ name: name, date: toISO(d) });
+    }
+  }
+
+  // 1. Fixed Date Holidays
+  addObserved("New Year's Day",   new Date(year, 0, 1));
+  addObserved("Independence Day", new Date(year, 6, 4));
+  addObserved("Christmas Eve",    new Date(year, 11, 24));
+  addObserved("Christmas Day",    new Date(year, 11, 25));
+  addObserved("New Year's Eve",   new Date(year, 11, 31));
+
+  // 2. Floating Holidays (Monday Rules)
+  
+  // Memorial Day: Last Monday of May
+  let mem = new Date(year, 4, 31);
+  while (mem.getDay() !== 1) mem.setDate(mem.getDate() - 1);
+  hols.push({ name: "Memorial Day", date: toISO(mem) });
+
+  // Labor Day: First Monday of Sept
+  let lab = new Date(year, 8, 1);
+  while (lab.getDay() !== 1) lab.setDate(lab.getDate() + 1);
+  hols.push({ name: "Labor Day", date: toISO(lab) });
+
+  // Thanksgiving: 4th Thursday of Nov
+  let tkg = new Date(year, 10, 1);
+  let count = 0;
+  while (count < 4) {
+    if (tkg.getDay() === 4) count++;
+    if (count < 4) tkg.setDate(tkg.getDate() + 1);
+  }
+  hols.push({ name: "Thanksgiving Day", date: toISO(tkg) });
+
+  // Black Friday: Day after Thanksgiving
+  let blk = new Date(tkg);
+  blk.setDate(blk.getDate() + 1);
+  hols.push({ name: "Black Friday", date: toISO(blk) });
+
+  return hols;
+}
+
+// Initialize the holidays object for a range of years (e.g., 2020 to 2040)
+function initializeHolidayDatabase() {
+  const db = {};
+  for (let y = 2020; y <= 2040; y++) {
+    db[y] = getHolidaysForYear(y);
+  }
+  return db;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+// Load from localStorage or generate fresh
+let holidays = JSON.parse(localStorage.getItem('trident_holidays')) || initializeHolidayDatabase();
+
+let activeYear = new Date().getFullYear();
+let dcSign = '+';
+//let dcWorking = true;
+let dcWorking = 'day';
+
+function saveHolidays() {
+  localStorage.setItem('trident_holidays', JSON.stringify(holidays));
+}
+
+function allHolidayDates() {
+  // If the user has navigated to a year not in our initial 2020-2040 range, 
+  // generate it on the fly so the calculator never breaks.
+  const currentYear = activeYear;
+  if (!holidays[currentYear]) {
+    holidays[currentYear] = getHolidaysForYear(currentYear);
+    saveHolidays();
+  }
+  
+  const all = [];
+  Object.values(holidays).forEach(arr => arr.forEach(h => all.push(h.date)));
+  return all;
+}
+
+// ═══════════════════════════════════════════════════
+// DATE HELPERS
+// ═══════════════════════════════════════════════════
+function toLocal(dateStr) {
+  // parse YYYY-MM-DD without timezone shift
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function toISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatFull(d) {
+  return d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+
+function formatShort(d) {
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
+function weekNum(d) {
+  const start = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(((d - start) / 86400000 + start.getDay() + 1) / 7);
+}
+
+function dayOfYear(d) {
+  // 1. Get Jan 1st of the current year
+  const janFirst = new Date(d.getFullYear(), 0, 1);
+  // 2. Calculate the difference in milliseconds
+  const diff = d - janFirst;
+  // 3. Convert to days and add 1 (because Jan 1 is Day 1)
+  // We use Math.round to kill any 0.9999 or 1.0001 errors caused by DST jumps
+  return Math.round(diff / (1000 * 60 * 60 * 24));// + 1;
+}
+
+function isWeekend(d) { return d.getDay() === 0 || d.getDay() === 6; }
+
+function isHoliday(d) { return allHolidayDates().includes(toISO(d)); }
+
+// Add N working days (skipping weekends + holidays)
+function addWorkingDays(start, n, forward) {
+  let d = new Date(start);
+  let count = 0;
+  const step = forward ? 1 : -1;
+  while (count < n) {
+    d.setDate(d.getDate() + step);
+    if (!isWeekend(d) && !isHoliday(d)) count++;
+  }
+  return d;
+}
+
+// Count working days between two dates (inclusive start, exclusive end)
+function workingDaysBetween(a, b) {
+  let count = 0;
+  let d = new Date(a);
+  while (d < b) {
+    if (!isWeekend(d) && !isHoliday(d)) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
+function calDaysBetween(a, b) {
+  return Math.round((b - a) / 86400000);
+}
+
+function dstDates(year) {
+  // 2nd Sunday of March
+  const marchFirst = new Date(year, 2, 1);
+  const marchSunday = (7 - marchFirst.getDay()) % 7;
+  const dstOn = new Date(year, 2, 1 + marchSunday + 7);
+  // 1st Sunday of November
+  const novFirst = new Date(year, 10, 1);
+  const novSunday = (7 - novFirst.getDay()) % 7;
+  const dstOff = new Date(year, 10, 1 + novSunday);
+  return { on: dstOn, off: dstOff };
+}
+
+function isDST(d) {
+  const { on, off } = dstDates(d.getFullYear());
+  return d >= on && d < off;
+}
+
+// ARO label: "X Weeks ARO" or "X Working Days ARO"
+function aroLabel(workDays) {
+  const weeks = workDays / 5;
+
+  if (weeks < 1) {
+    // Less than a week: show exact working days
+    return `${workDays} Working Days ARO`;
+  } else if (weeks === 1) {
+    // Exactly one week
+    return `1 Week ARO`;
+  } else {
+    // More than one week: Round up (Excel's ROUNDUP)
+    const roundedWeeks = Math.ceil(weeks);
+    return `${roundedWeeks} Weeks ARO`;
+  }
+}
+
+function weeksAndDaysStr(totalDays) {
+  const w = Math.floor(totalDays / 7);
+  const d = totalDays % 7;
+  if (w === 0) return `${d} Day${d !== 1 ? 's' : ''}`;
+  if (d === 0) return `${w} Week${w !== 1 ? 's' : ''}`;
+  return `${w} Wk${w !== 1 ? 's' : ''} & ${d} Day${d !== 1 ? 's' : ''}`;
+}
+
+function monthsAndDaysStr(start, end) {
+  let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+  let days = end.getDate() - start.getDate();
+  if (days < 0) { months--; days += new Date(end.getFullYear(), end.getMonth(), 0).getDate(); }
+  if (months === 0) return `${days} Day${days !== 1 ? 's' : ''}`;
+  if (days === 0) return `${months} Mo${months !== 1 ? 's' : ''}`;
+  return `${months} Mo${months !== 1 ? 's' : ''} & ${days} Day${days !== 1 ? 's' : ''}`;
+}
+
+// ═══════════════════════════════════════════════════
+// INFO STRIP
+// ═══════════════════════════════════════════════════
+function updateStrip() {
+  const today = new Date();
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  document.getElementById('stripDate').textContent = today.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  document.getElementById('stripWeek').textContent = weekNum(today);
+  document.getElementById('stripDoy').textContent  = dayOfYear(today);
+  document.getElementById('stripQ').textContent    = 'Q' + Math.ceil((today.getMonth()+1)/3);
+  const dstOn = isDST(today);
+  document.getElementById('stripDSTval').textContent = dstOn ? 'DST ON ☀️' : 'DST OFF 🌙';
+
+  // header
+  document.getElementById('headerToday').textContent = today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  document.getElementById('headerWeek').textContent  = weekNum(today);
+  document.getElementById('headerDST').textContent   = dstOn ? 'DST ON' : 'DST OFF';
+}
+
+// ═══════════════════════════════════════════════════
+// DATE CALCULATOR
+// ═══════════════════════════════════════════════════
+function setSign(s) {
+  dcSign = s;
+  var p = document.getElementById('dc_plus');
+  var m = document.getElementById('dc_minus');
+  if(s==='+') { p.classList.add('active'); m.classList.remove('active'); }
+  else        { p.classList.remove('active'); m.classList.add('active'); }
+  
+  // Trigger calculation immediately
+  runDC();
+}
+
+function setWorkingMode(mode) {
+  dcWorking = mode;
+  var ids = ['dc_workingday','dc_calendarday','dc_calendarweek','dc_calendarmonth'];
+  ids.forEach(function(id) {
+    document.getElementById(id).classList.remove('active');
+  });
+
+  if(mode==='work')  document.getElementById('dc_workingday').classList.add('active');
+  if(mode==='day')   document.getElementById('dc_calendarday').classList.add('active');
+  if(mode==='week')  document.getElementById('dc_calendarweek').classList.add('active');
+  if(mode==='month') document.getElementById('dc_calendarmonth').classList.add('active');
+
+  // List of all your button IDs
+  const buttons = [
+    'dc_workingday', 
+    'dc_calendarday', 
+    'dc_calendarweek', 
+    'dc_calendarmonth'
+  ];
+
+  // Map modes to specific button IDs
+  const modeToId = {
+    'work':  'dc_workingday',
+    'day':   'dc_calendarday',
+    'week':  'dc_calendarweek',
+    'month': 'dc_calendarmonth'
+  };
+
+  // Define the labels for each mode
+  const modeToLabel = {
+    'work':  'Number of Work Days',
+    'day':   'Number of Days',
+    'week':  'Number of Weeks',
+    'month': 'Number of Months'
+  };
+
+  // Update the label text
+  document.getElementById('dc_units_label').textContent = modeToLabel[mode];
+  
+  // Trigger calculation immediately
+  runDC();
+}
+
+let lastValidDays = 15;
+
+function runDC() {
+  const startVal = document.getElementById('dc_start').value;
+  const parsed   = parseInt(document.getElementById('dc_days').value);
+
+  // If the field is mid-edit or empty, use the last known good value
+  if (!isNaN(parsed) && parsed >= 1) lastValidDays = parsed;
+  const numVal = lastValidDays;
+
+  if (!startVal) return;
+
+  const start = toLocal(startVal);
+  
+  // --- THE FIX: Direct ID Check ---
+  // We check which button has the 'active' class by looking at your specific IDs
+  let currentMode = 'work'; // default
+  if (document.getElementById('dc_workingday').classList.contains('active')) currentMode = 'work';
+  if (document.getElementById('dc_calendarweek').classList.contains('active')) currentMode = 'week';
+  if (document.getElementById('dc_calendarmonth').classList.contains('active')) currentMode = 'month';
+  if (document.getElementById('dc_calendarday').classList.contains('active')) currentMode = 'day';
+
+  // Check the sign (+ or -)
+  const forward = document.getElementById('dc_plus').classList.contains('active');
+  let result = new Date(start);
+
+  // Determine calculation based on the detected mode
+  if (currentMode === 'work') {
+    result = addWorkingDays(start, numVal, forward);
+  } 
+  else if (currentMode === 'day') {
+    result.setDate(result.getDate() + (forward ? numVal : -numVal));
+  } 
+  else if (currentMode === 'week') {
+    result.setDate(result.getDate() + (forward ? (numVal * 7) : -(numVal * 7)));
+  } 
+  else if (currentMode === 'month') {
+    const monthStep = forward ? numVal : -numVal;
+    result.setMonth(result.getMonth() + monthStep);
+  }
+
+  // Calculate the stats for the bottom "Pills"
+  const calDays  = Math.abs(calDaysBetween(start, result));
+  const workDays = workingDaysBetween(forward ? start : result, forward ? result : start);
+
+  // Update UI
+  const resultDateEl = document.getElementById('dc_result_date');
+  resultDateEl.textContent = formatFull(result);
+  
+  // Holiday or Weekend Warning
+  const fallsOnHoliday = isHoliday(result);
+  const fallsOnWeekend = isWeekend(result);
+  const shouldShowWarning = fallsOnHoliday || fallsOnWeekend;
+
+  let warningMessage = "";
+  if (fallsOnHoliday) {
+    warningMessage = "⚠ Result falls on a holiday";
+  } else if (fallsOnWeekend) {
+    warningMessage = "⚠ Result falls on a weekend";
+  }
+  const resultSubEl = document.getElementById('dc_result_sub');
+  const resultContainer = document.getElementById('dc_result');
+
+  resultSubEl.textContent = warningMessage;
+  resultContainer.classList.toggle('warning', shouldShowWarning);
+
+  // Update Stats
+  document.getElementById('dc_weeks').textContent = (workDays / 5 % 1 === 0) ? (workDays / 5) : (workDays / 5).toFixed(1);
+  document.getElementById('dc_cal_days').textContent  = calDays;
+  document.getElementById('dc_work_days').textContent = workDays;
+
+  // Spin the wheel
+  updateWheel();
+}
+
+// ═══════════════════════════════════════════════════
+// BETWEEN DATES
+// ═══════════════════════════════════════════════════
+function runBD() {
+  const s = document.getElementById('bd_start').value;
+  const e = document.getElementById('bd_end').value;
+  if (!s || !e) return;
+  
+  const start = toLocal(s);
+  const end   = toLocal(e);
+  if (end <= start) return;
+
+  const calDays     = calDaysBetween(start, end);
+  const workDays    = workingDaysBetween(start, end);
+  const weeksExact  = calDays / 7;
+
+  // --- Logic for Warnings ---
+  const endHoliday = isHoliday(end);
+  const endWeekend = isWeekend(end);
+  const shouldWarn = endHoliday || endWeekend;
+
+  let warningMessage = "";
+  if (endHoliday) {
+    warningMessage = "⚠ End date falls on a holiday";
+  } else if (endWeekend) {
+    warningMessage = "⚠ End date falls on a weekend";
+  }
+  document.getElementById('bd_result').classList.toggle('warning', shouldWarn);
+  document.getElementById('bd_holiday_warn').textContent = warningMessage;
+  document.getElementById('bd_sub').textContent = `${formatShort(start)} → ${formatShort(end)}`;
+
+  // --- UI Updates ---
+  // Apply the "Force" toggle to prevent the sticky warning
+  const resultContainer = document.getElementById('bd_result');
+  const resultSub       = document.getElementById('bd_result_sub');
+
+  if (resultContainer) resultContainer.classList.toggle('warning', shouldWarn);
+  if (resultSub)       resultSub.textContent = warningMessage;
+
+  // Existing stats updates
+  document.getElementById('bd_aro').textContent         = aroLabel(workDays);
+  document.getElementById('bd_sub').textContent         = `${formatShort(start)} → ${formatShort(end)}`;
+  document.getElementById('bd_cal').textContent         = calDays;
+  document.getElementById('bd_work').textContent        = workDays;
+  document.getElementById('bd_weeks').textContent       = Number.isInteger(weeksExact) ? weeksExact : weeksExact.toFixed(1);
+  document.getElementById('bd_months_days').textContent = monthsAndDaysStr(start, end);
+  document.getElementById('bd_weeks_days').textContent  = weeksAndDaysStr(calDays);
+}
+
+// ═══════════════════════════════════════════════════
+// HOLIDAYS UI
+// ═══════════════════════════════════════════════════
+function buildYearTabs() {
+  const container = document.getElementById('yearTabs');
+  container.innerHTML = '';
+  const years = Object.keys(holidays).sort();
+  years.forEach(y => {
+    const btn = document.createElement('button');
+    btn.className = 'year-tab' + (parseInt(y) === activeYear ? ' active' : '');
+    btn.textContent = y;
+    btn.onclick = () => { activeYear = parseInt(y); buildYearTabs(); renderHolidays(); };
+    container.appendChild(btn);
+  });
+}
+
+function renderHolidays() {
+  const list = document.getElementById('holidayList');
+  list.innerHTML = '';
+  const hols = (holidays[activeYear] || []).slice().sort((a,b) => a.date.localeCompare(b.date));
+  if (hols.length === 0) {
+    list.innerHTML = '<li style="padding:12px 0;color:var(--gray);font-size:14px;">No holidays added for this year.</li>';
+  }
+  hols.forEach((h, i) => {
+    const d = toLocal(h.date);
+    const li = document.createElement('li');
+    li.className = 'holiday-item';
+    li.innerHTML = `
+      <span class="hdate">${formatShort(d)}</span>
+      <span class="hname">${h.name}</span>
+      <button class="hdelete" onclick="deleteHoliday('${h.date}')" title="Remove">✕</button>
+    `;
+    list.appendChild(li);
+  });
+
+  // DST info
+  const { on, off } = dstDates(activeYear);
+  const dst = isDST(new Date());
+  document.getElementById('dstInfo').innerHTML = `
+    <div class="dst-badge">
+      <span class="dst-dot ${dst ? 'on' : 'off'}"></span>
+      DST ${activeYear}: <strong>${formatShort(on)}</strong> → <strong>${formatShort(off)}</strong>
+      &nbsp;·&nbsp; Currently <strong>${dst ? 'ON' : 'OFF'}</strong>
+    </div>
+  `;
+}
+
+function deleteHoliday(dateStr) {
+  if (!holidays[activeYear]) return;
+  holidays[activeYear] = holidays[activeYear].filter(h => h.date !== dateStr);
+  saveHolidays();
+  renderHolidays();
+  runDC();
+  runBD();
+}
+
+function addHoliday() {
+  const name = document.getElementById('newHolName').value.trim();
+  const date = document.getElementById('newHolDate').value;
+  if (!name || !date) { alert('Please enter both a name and date.'); return; }
+  const year = parseInt(date.split('-')[0]);
+  if (!holidays[year]) holidays[year] = [];
+  // check duplicate
+  if (holidays[year].some(h => h.date === date && h.name === name)) return;
+  holidays[year].push({ name, date });
+  saveHolidays();
+  activeYear = year;
+  buildYearTabs();
+  renderHolidays();
+  document.getElementById('newHolName').value = '';
+  document.getElementById('newHolDate').value = '';
+  runDC();
+  runBD();
+}
+
+function resetToToday() {
+  const today = todayISO();
+  
+  // Update the input values
+  document.getElementById('dc_start').value = today;
+  document.getElementById('bd_start').value = today;
+  
+  // Update the End Date (keeping your 21-day default)
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + 21);
+  document.getElementById('bd_end').value = toISO(endDate);
+  
+  // Trigger the math and the top info strip
+  updateStrip();
+  runDC();
+  runBD();
+}
+
+
+// New helper to draw only the outer curved line
+function describeArcOnly(x, y, radius, startAngle, endAngle) {
+    const start = polarToCartesian(x, y, radius, endAngle);
+    const end = polarToCartesian(x, y, radius, startAngle);
+    const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+
+    // M = Move to the start of the curve
+    // A = Draw the arc to the end point
+    return [
+        "M", start.x, start.y,
+        "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y
+    ].join(" ");
+}
+
+function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+  const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+  return {
+    x: centerX + (radius * Math.cos(angleInRadians)),
+    y: centerY + (radius * Math.sin(angleInRadians))
+  };
+}
+
+function updateWheel() {
+    const startVal = document.getElementById('dc_start').value;
+    const daysVal = parseInt(document.getElementById('dc_days').value);
+    
+    if (!startVal || isNaN(daysVal)) return;
+
+    const start = toLocal(startVal);
+    const isForward = document.getElementById('dc_plus').classList.contains('active');
+    
+    // Use the logic to find the exact result date object directly
+    let currentMode = 'work';
+    if (document.getElementById('dc_workingday').classList.contains('active')) currentMode = 'work';
+    else if (document.getElementById('dc_calendarweek').classList.contains('active')) currentMode = 'week';
+    else if (document.getElementById('dc_calendarmonth').classList.contains('active')) currentMode = 'month';
+    else if (document.getElementById('dc_calendarday').classList.contains('active')) currentMode = 'day';
+
+    let resultDate;
+    if (currentMode === 'work') {
+        resultDate = addWorkingDays(start, daysVal, isForward);
+    } else if (currentMode === 'day') {
+        resultDate = new Date(start);
+        resultDate.setDate(resultDate.getDate() + (isForward ? daysVal : -daysVal));
+    } else if (currentMode === 'week') {
+        resultDate = new Date(start);
+        resultDate.setDate(resultDate.getDate() + (isForward ? (daysVal * 7) : -(daysVal * 7)));
+    } else if (currentMode === 'month') {
+        resultDate = new Date(start);
+        resultDate.setMonth(resultDate.getMonth() + (isForward ? daysVal : -daysVal));
+    }
+
+    const diffDays = calDaysBetween(start, resultDate);
+
+    // 1. Arrow Rotation: Always positive (+) based on the absolute spread
+    // In both modes, the arrow represents the "Today/Start" relative to the result
+    const arrowRotation = (Math.abs(diffDays) / 365) * 360;
+    document.getElementById('red-arrow-container').style.transform = `rotate(${arrowRotation}deg)`;
+
+    // 2. Arc Offset (using your 1.8 nudge)
+    const arcCircle = document.getElementById('highlight-arc');
+    const radius = 270; 
+    const circumference = 2 * Math.PI * radius;
+    arcCircle.style.strokeDasharray = circumference;
+
+    const arcDays = Math.max(0, Math.abs(diffDays) - 1.8);
+    const offset = circumference - ((arcDays / 365) * circumference);
+    arcCircle.style.strokeDashoffset = offset;
+
+    // ... (rest of your existing arrow and arc logic) ...
+
+    // 3. Outer Ring (Calendar Position)
+    const initialImageOffset = -2.08; 
+    let anchorDate = isForward ? start : resultDate;
+    
+    const anchorDoy = dayOfYear(anchorDate);
+    // Subtracting 1 ensures Jan 1 (Day 1) maps to 0 degrees rotation
+    const ringRotation = -((anchorDoy - 1) / 365 * 360) + initialImageOffset;
+
+    document.getElementById('outer-ring').style.transform = `rotate(${ringRotation}deg)`;
+}
+
+
+// Updated Text Helper with Auto-Flip for bottom half readability
+function createWheelText(txt, r, angle, size, weight, color="#2f2f2f") {
+  const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  const x = 300 + r * Math.sin(angle * Math.PI / 180);
+  const y = 300 - r * Math.cos(angle * Math.PI / 180);
+  t.setAttribute("x", x);
+  t.setAttribute("y", y);
+  t.setAttribute("text-anchor", "middle");
+  t.setAttribute("dominant-baseline", "middle");
+  t.setAttribute("font-size", size);
+  t.setAttribute("font-weight", weight);
+  t.setAttribute("fill", color);
+  t.setAttribute("font-family", "var(--font-head)");
+  
+  // Flip text on bottom half (between 90 and 270 degrees)
+  let rotation = angle;
+  if (angle > 90 && angle < 270) rotation += 180;
+  
+  t.setAttribute("transform", `rotate(${rotation}, ${x}, ${y})`);
+  t.textContent = txt;
+  return t;
+}
+
+function createWheelLine(r, len, angle, color, width) {
+  const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  l.setAttribute("x1", 300); l.setAttribute("y1", 300 - r);
+  l.setAttribute("x2", 300); l.setAttribute("y2", 300 - r - len);
+  l.setAttribute("stroke", color);
+  l.setAttribute("stroke-width", width);
+  l.setAttribute("transform", `rotate(${angle}, 300, 300)`);
+  return l;
+}
+
+function pushToWheel(type) {
+  // 1. Get the values currently calculated in the Between Dates section
+  const workDaysVal = document.getElementById('bd_work').textContent;
+  const calDaysVal = document.getElementById('bd_cal').textContent;
+  
+  // 2. Identify the target input in the Date Calculator
+  const dcInput = document.getElementById('dc_days');
+  
+  if (type === 'work') {
+    // Set the number
+    dcInput.value = workDaysVal;
+    // Switch Date Calculator to "Work Day" mode
+    setWorkingMode('work');
+  } else {
+    // Set the number
+    dcInput.value = calDaysVal;
+    // Switch Date Calculator to "Calendar Day" mode
+    setWorkingMode('day');
+  }
+
+  // 3. Trigger the Date Calculator logic to update the results and rotate the wheel
+  runDC();
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+function todayISO() {
+  const t = new Date();
+  return toISO(t);
+}
+
+function showTab(tab) {
+  const calcTab = document.getElementById('calcTab');
+  const holTab  = document.getElementById('holidaysTab');
+  const calcBtn = document.getElementById('tabCalcBtn');
+  const holBtn  = document.getElementById('tabHolBtn');
+
+  if (tab === 'calc') {
+    calcTab.style.display = 'block';
+    holTab.style.display = 'none';
+    calcBtn.classList.add('active');
+    holBtn.classList.remove('active');
+  } else {
+    calcTab.style.display = 'none';
+    holTab.style.display = 'block';
+    calcBtn.classList.remove('active');
+    holBtn.classList.add('active');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const today = todayISO();
+
+  // 1. Pre-fill date fields
+  document.getElementById('dc_start').value = today;
+  document.getElementById('bd_start').value = today;
+
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + 21);
+  document.getElementById('bd_end').value = toISO(endDate);
+
+  // 2. Initialize Visuals
+  resetToToday();
+  updateStrip();
+  buildYearTabs();
+  renderHolidays();
+
+  // 3. Attach listeners to dc_days and dc_start
+  const dcDays = document.getElementById('dc_days');
+  const dcStart = document.getElementById('dc_start');
+
+  if (dcDays) {
+    // 'input' captures the up/down arrows and typing immediately
+    dcDays.addEventListener('input', runDC);
+    // 'change' acts as a backup for certain browsers
+    dcDays.addEventListener('change', runDC);
+  }
+
+  if (dcStart) {
+    dcStart.addEventListener('input', runDC);
+    dcStart.addEventListener('change', runDC);
+  }
+
+  // 4. Comparison Tool Listeners
+  ['bd_start', 'bd_end'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', runBD);
+  });
+
+  // 5. Run once on load
+  runBD();
+  runDC(); // This will trigger updateWheel() automatically based on your runDC code
+});
+</script>
+</body>
+</html>
