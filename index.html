@@ -1007,14 +1007,14 @@ function aroLabel(workDays) {
 
   if (weeks < 1) {
     // Less than a week: show exact working days
-    return `${workDays} Working Days ARO`;
+    return `${workDays} Working Days`;
   } else if (weeks === 1) {
     // Exactly one week
-    return `1 Week ARO`;
+    return `1 Week`;
   } else {
     // More than one week: Round up (Excel's ROUNDUP)
     const roundedWeeks = Math.ceil(weeks);
-    return `${roundedWeeks} Weeks ARO`;
+    return `${roundedWeeks} Weeks`;
   }
 }
 
