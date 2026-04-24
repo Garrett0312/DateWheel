@@ -1005,6 +1005,29 @@
 </div>
 
 <script>
+let activeTab = 'calc';
+
+function openTutorial() {
+  const modal = document.getElementById('tutorialModal');
+  const img = document.getElementById('tutorialImage');
+
+  if (activeTab === 'calc') {
+    img.src = 'TPI-Datewheel Tutorial Page 1.jpg';
+  } else {
+    img.src = 'TPI-Datewheel Tutorial Page 2.jpg';
+  }
+
+  modal.style.display = 'flex';
+}
+
+function closeTutorial(e) {
+  if (
+    e.target.id === 'tutorialModal' ||
+    e.target.classList.contains('tutorial-close')
+  ) {
+    document.getElementById('tutorialModal').style.display = 'none';
+  }
+}
 // ═══════════════════════════════════════════════════
 // HOLIDAYS DATA
 // ═══════════════════════════════════════════════════
