@@ -906,7 +906,7 @@
           <label>Start Date</label>
           <input type="date" id="dc_start">
           <div style="text-align: right;">
-              <span onclick="resetToToday()" style="font-size: 10px; color: var(--gold); cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+              <span onclick="resetDCStart()" style="font-size: 10px; color: var(--gold); cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
                 ↺ Reset to Today
               </span>
             </div>
@@ -970,7 +970,7 @@
             <label>Start Date</label>
             <input type="date" id="bd_start">
             <div style="text-align: right;">
-              <span onclick="resetToToday()" style="font-size: 10px; color: var(--gold); cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+              <span onclick="resetBDStart()" style="font-size: 10px; color: var(--gold); cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
                 ↺ Reset to Today
               </span>
             </div>
@@ -1628,6 +1628,16 @@ function addHoliday() {
 
 function setEndToToday() {
   document.getElementById('bd_end').value = todayISO();
+  runBD();
+}
+
+function resetDCStart() {
+  document.getElementById('dc_start').value = todayISO();
+  runDC();
+}
+
+function resetBDStart() {
+  document.getElementById('bd_start').value = todayISO();
   runBD();
 }
 
