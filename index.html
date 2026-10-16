@@ -400,6 +400,10 @@
     color: var(--navy);
     background: var(--off-white);
     transition: border-color 0.15s;
+    /*appearance: none;*/
+  }
+
+  select {
     appearance: none;
   }
 
@@ -407,6 +411,41 @@
     outline: none;
     border-color: var(--gold);
     background: #fff;
+  }
+
+  .date-wrap { position: relative; }
+  .date-seg {
+    display: flex; align-items: center; gap: 2px;
+    height: 44px; padding: 0 8px 0 12px;
+    border: 1.5px solid var(--gray-light);
+    border-radius: var(--radius);
+    background: var(--off-white);
+    font-family: var(--font-body); font-size: 15px; color: var(--navy);
+    transition: border-color 0.15s;
+  }
+  .date-seg:focus-within { border-color: var(--gold); background: #fff; }
+  .date-seg input.seg {
+    border: 0; background: transparent; outline: none;
+    padding: 2px 0; height: auto; width: 2.4ch;
+    text-align: center; font: inherit; color: inherit;
+    border-radius: 3px;
+  }
+  .date-seg input.seg-4 { width: 4.6ch; }
+  .date-seg input.seg:focus { background: rgba(203,114,39,0.28); }
+  .date-seg .sep { opacity: 0.6; }
+  .date-seg .cal-btn {
+    margin-left: auto; background: none; border: 0; padding: 4px;
+    cursor: pointer; color: var(--navy); display: flex;
+  }
+  .date-seg .cal-btn svg { width: 18px; height: 18px; }
+
+  .add-holiday-row .date-seg { height: 50px; }
+
+  /* the real date input stays hidden; it holds the value and powers the popup */
+  .date-wrap input[type="date"] {
+    position: absolute; right: 0; bottom: 0;
+    width: 1px; height: 1px; opacity: 0; pointer-events: none;
+    padding: 0; border: 0;
   }
 
   .field { 
@@ -898,6 +937,7 @@
         <div class="result-box" id="dc_result">
           <div class="result-label">Result Date</div>
           <div class="result-main" id="dc_result_date">—</div>
+          <div id="dc_result_short" style="text-align: left; font-size: 15px; color: var(--white); margin-top: 2px; margin-left: 1px;"></div>
           <div class="result-sub" id="dc_result_sub"></div>
         </div>
 
@@ -935,9 +975,18 @@
               </span>
             </div>
           </div>
+          <!--div class="field">
+            <label>End Date</label>
+            <input type="date" id="bd_end">
+          </div-->
           <div class="field">
             <label>End Date</label>
             <input type="date" id="bd_end">
+            <div style="text-align: right;">
+              <span onclick="setEndToToday()" style="font-size: 10px; color: var(--gold); cursor: pointer; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+                Set to Today
+              </span>
+            </div>
           </div>
         </div>
 
@@ -1033,7 +1082,8 @@
           </div>
           <div>
             <label>Date</label>
-            <input type="date" id="newHolDate" style="height: 50px;">
+            <!--input type="date" id="newHolDate" style="height: 50px;"-->
+            <input type="date" id="newHolDate">
           </div>
           <button class="btn btn-primary btn-sm" onclick="addHoliday()" style="height: 50px;">+ Add</button>
         </div>
@@ -1420,6 +1470,11 @@ function runDC() {
   // Update UI
   const resultDateEl = document.getElementById('dc_result_date');
   resultDateEl.textContent = formatFull(result);
+
+  // Short MM/DD/YYYY version
+  const mm = String(result.getMonth() + 1).padStart(2, '0');
+  const dd = String(result.getDate()).padStart(2, '0');
+  document.getElementById('dc_result_short').textContent = `${mm}/${dd}/${result.getFullYear()}`;
   
   // Holiday or Weekend Warning
   const fallsOnHoliday = isHoliday(result);
@@ -1571,6 +1626,11 @@ function addHoliday() {
   runBD();
 }
 
+function setEndToToday() {
+  document.getElementById('bd_end').value = todayISO();
+  runBD();
+}
+
 function resetToToday() {
   const today = todayISO();
   
@@ -1710,6 +1770,9 @@ function pushToWheel(type) {
   // 1. Get the values currently calculated in the Between Dates section
   const workDaysVal = document.getElementById('bd_work').textContent;
   const calDaysVal = document.getElementById('bd_cal').textContent;
+
+  document.getElementById('dc_start').value = document.getElementById('bd_start').value;
+
   
   // 2. Identify the target input in the Date Calculator
   const dcInput = document.getElementById('dc_days');
@@ -1817,5 +1880,192 @@ window.addEventListener('resize', logViewportSize);
 
 
 </script>
+
+<script>
+(function () {
+  var valDesc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  var CAL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
+  function pad(v, n) { return String(v).padStart(n, '0'); }
+
+  function build(id) {
+    var native = document.getElementById(id);
+    if (!native) return;
+
+    var wrap = document.createElement('div');
+    wrap.className = 'date-wrap';
+    native.parentNode.insertBefore(wrap, native);
+
+    var seg = document.createElement('div');
+    seg.className = 'date-seg';
+    wrap.appendChild(seg);
+
+    function mk(ph, len) {
+      var i = document.createElement('input');
+      i.type = 'text'; i.inputMode = 'numeric'; i.autocomplete = 'off';
+      i.placeholder = ph; i.className = 'seg seg-' + len;
+      i.setAttribute('aria-label', ph);
+      return i;
+    }
+    function sep() {
+      var s = document.createElement('span');
+      s.className = 'sep'; s.textContent = '/';
+      return s;
+    }
+
+    var mm = mk('mm', 2), dd = mk('dd', 2), yy = mk('yyyy', 4);
+    var parts = [mm, dd, yy];
+    seg.appendChild(mm); seg.appendChild(sep());
+    seg.appendChild(dd); seg.appendChild(sep());
+    seg.appendChild(yy);
+
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'cal-btn';
+    btn.setAttribute('aria-label', 'Open calendar');
+    btn.innerHTML = CAL_SVG;
+    seg.appendChild(btn);
+
+    native.tabIndex = -1;
+    wrap.appendChild(native);
+
+    var typing = false;
+    var fresh = [true, true, true];
+
+    // ---- sync text boxes from the real date input ----
+    function render() {
+      var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valDesc.get.call(native) || '');
+      if (m) { yy.value = m[1]; mm.value = m[2]; dd.value = m[3]; }
+      else   { mm.value = ''; dd.value = ''; yy.value = ''; }
+    }
+
+    // keep boxes updated when other code sets .value (Reset to Today, etc.)
+    Object.defineProperty(native, 'value', {
+      configurable: true,
+      get: function () { return valDesc.get.call(native); },
+      set: function (v) { valDesc.set.call(native, v); if (!typing) render(); }
+    });
+    native.addEventListener('input',  function () { if (!typing) render(); });
+    native.addEventListener('change', function () { if (!typing) render(); });
+
+    // ---- push typed values into the real date input ----
+    function tryCommit() {
+      if (mm.value.length !== 2 || dd.value.length !== 2 || yy.value.length !== 4) return;
+      var M = +mm.value, D = +dd.value, Y = +yy.value;
+      if (M < 1 || M > 12 || D < 1 || Y < 1000) return;
+      var maxD = new Date(Y, M, 0).getDate();
+      if (D > maxD) D = maxD;
+      var iso = Y + '-' + pad(M, 2) + '-' + pad(D, 2);
+      if (valDesc.get.call(native) === iso) return;
+      typing = true;
+      valDesc.set.call(native, iso);
+      native.dispatchEvent(new Event('input', { bubbles: true }));
+      typing = false;
+    }
+
+    function step(idx, dir) {
+      var now = new Date();
+      var M = +mm.value || (now.getMonth() + 1);
+      var Y = +yy.value || now.getFullYear();
+      var D = +dd.value || now.getDate();
+      if (idx === 0) M = ((M - 1 + dir + 12) % 12) + 1;
+      else if (idx === 1) { var mx = new Date(Y, M, 0).getDate(); D = ((D - 1 + dir + mx) % mx) + 1; }
+      else Y += dir;
+      mm.value = pad(M, 2); dd.value = pad(D, 2); yy.value = pad(Y, 4);
+      tryCommit(); render();
+      parts[idx].select();
+    }
+
+    function onKey(e, idx) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      var el = parts[idx], max = idx === 2 ? 4 : 2;
+
+      if (/^\d$/.test(e.key)) {
+        e.preventDefault();
+        var cur = fresh[idx] ? '' : el.value;
+        if (cur.length >= max) cur = '';
+        cur += e.key;
+        fresh[idx] = false;
+        var adv = false;
+        if (idx === 0) {
+          if (cur.length === 1 && +cur > 1) { cur = '0' + cur; adv = true; }
+          else if (cur.length === 2) { if (+cur > 12) cur = '12'; if (+cur < 1) cur = '01'; adv = true; }
+        } else if (idx === 1) {
+          if (cur.length === 1 && +cur > 3) { cur = '0' + cur; adv = true; }
+          else if (cur.length === 2) { if (+cur > 31) cur = '31'; if (+cur < 1) cur = '01'; adv = true; }
+        }
+        el.value = cur;
+        if (adv && idx < 2) parts[idx + 1].focus();
+        tryCommit();
+        return;
+      }
+
+      switch (e.key) {
+        case 'ArrowLeft':  e.preventDefault(); if (idx > 0) parts[idx - 1].focus(); return;
+        case 'ArrowRight': e.preventDefault(); if (idx < 2) parts[idx + 1].focus(); return;
+        case 'ArrowUp':    e.preventDefault(); step(idx, 1);  return;
+        case 'ArrowDown':  e.preventDefault(); step(idx, -1); return;
+        case 'Backspace':
+        case 'Delete':     e.preventDefault(); el.value = ''; fresh[idx] = false; return;
+        case 'Enter':      el.blur(); return;
+        case '/': case '-': case '.': case ' ':
+          e.preventDefault();
+          if (el.value.length && idx < 2) {
+            if (el.value.length === 1) el.value = pad(el.value, 2);
+            parts[idx + 1].focus(); tryCommit();
+          }
+          return;
+      }
+      // block letters and other printable characters
+      if (e.key.length === 1) e.preventDefault();
+    }
+
+    parts.forEach(function (el, idx) {
+      el.addEventListener('keydown', function (e) { onKey(e, idx); });
+      el.addEventListener('focus', function () {
+        fresh[idx] = true;
+        setTimeout(function () { el.select(); }, 0);
+      });
+      el.addEventListener('mouseup', function (e) {
+        if (fresh[idx]) { e.preventDefault(); el.select(); }
+      });
+    });
+
+    // clicking empty space in the box focuses the month section
+    seg.addEventListener('mousedown', function (e) {
+      if (e.target === seg || e.target.classList.contains('sep')) {
+        e.preventDefault(); mm.focus();
+      }
+    });
+
+    // paste a full date like 11/6/2026
+    seg.addEventListener('paste', function (e) {
+      e.preventDefault();
+      var t = (e.clipboardData || window.clipboardData).getData('text').trim();
+      var m = /^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(t);
+      if (!m) return;
+      mm.value = pad(m[1], 2); dd.value = pad(m[2], 2); yy.value = m[3];
+      tryCommit(); render();
+    });
+
+    // tidy up when focus leaves the whole date box
+    seg.addEventListener('focusout', function (e) {
+      if (seg.contains(e.relatedTarget)) return;
+      if (mm.value.length === 1) mm.value = pad(mm.value, 2);
+      if (dd.value.length === 1) dd.value = pad(dd.value, 2);
+      if (yy.value.length === 2) yy.value = '20' + yy.value;
+      tryCommit(); render();
+    });
+
+    // calendar icon opens the popup directly
+    btn.addEventListener('click', function () {
+      try { native.showPicker(); } catch (err) { native.focus(); }
+    });
+
+    render();
+  }
+
+  ['dc_start', 'bd_start', 'bd_end', 'newHolDate'].forEach(build);
+})();
+</script>
+
 </body>
 </html>
